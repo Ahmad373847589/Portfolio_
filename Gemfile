@@ -11,6 +11,7 @@ source "https://rubygems.org"
 gem "csv"
 gem "bigdecimal"
 gem "base64"
+gem "openssl", ">= 3.1.2", "< 4.0"
 
 # ============================================================================
 # Jekyll Core & Plugins
