@@ -61,7 +61,7 @@ Flags are made using Wikipedia images
     var http_source = "https://upload.wikimedia.org/wikipedia/commons/";
     var living_in_the_world = [
         {"flag": "0/01/Flag_of_California.svg", "greeting": "Hey", "description": "California - forever"},
-        {"flag": "9/9a/Flag_of_Afghanistan.svg", "greeting": "Salam", "description": "Afghanistan - roots"},
+        {"flag": "https://flagcdn.com/af.svg", "greeting": "Salam", "description": "Afghanistan - roots"},
         {"flag": "a/a4/Flag_of_the_United_States.svg", "greeting": "Hello", "description": "United States - home"},
     ];
 
@@ -75,7 +75,8 @@ Flags are made using Wikipedia images
         gridItem.className = "grid-item";  // This class name connects the gridItem to the CSS style elements
         // Add "img" HTML tag for the flag
         var img = document.createElement("img");
-        img.src = http_source + location.flag; // concatenate the source and flag
+        var flagSource = location.flag.startsWith("http") ? location.flag : http_source + location.flag;
+        img.src = flagSource; // use either a direct URL or the Wikimedia source prefix
         img.alt = location.flag + " Flag"; // add alt text for accessibility
 
         // Add "p" HTML tag for the description
