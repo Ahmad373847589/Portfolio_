@@ -220,7 +220,7 @@ permalink: /forest-chase/
   const targetTime = 60;
   const keys = new Set();
   const particles = [];
-  let width = 0, height = 0, lastFrame = 0, elapsed = 0, health = 100, running = false, paused = false, outcome = '';
+  let width = 0, height = 0, lastFrame = 0, elapsed = 0, health = 100, damageCooldown = 0, burnTimer = 0, running = false, paused = false, outcome = '';
   let audioContext;
   const best = Number(localStorage.getItem('forest-chase-best') || 0);
   bestReadout.textContent = formatTime(best);
@@ -245,13 +245,13 @@ permalink: /forest-chase/
     const angle = Math.random() * Math.PI * 2;
     fox.dx = Math.cos(angle);
     fox.dy = Math.sin(angle);
-    fox.speed = 390 + Math.random() * 110;
+    fox.speed = 500 + Math.random() * 120;
   }
 
   function reset() {
     player.x = .2; player.y = .54; player.bob = 0;
     fox.x = .8; fox.y = .42; fox.turn = 0; randomFoxDirection();
-    elapsed = 0; health = 100; outcome = ''; particles.length = 0; paused = false;
+    elapsed = 0; health = 100; damageCooldown = 0; burnTimer = 0; outcome = ''; particles.length = 0; paused = false;
     timeReadout.textContent = '00:00'; status.textContent = 'Hunter loose';
     updateHealth();
   }
@@ -306,6 +306,8 @@ permalink: /forest-chase/
   function update(delta) {
     if (!running || paused) return;
     elapsed += delta;
+    damageCooldown = Math.max(0, damageCooldown - delta);
+    burnTimer = Math.max(0, burnTimer - delta);
     timeReadout.textContent = formatTime(elapsed);
     const horizontal = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0);
     const vertical = (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) - (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
@@ -319,10 +321,12 @@ permalink: /forest-chase/
     fox.turn -= delta;
     if (fox.x < .05 || fox.x > .95 || fox.y < .07 || fox.y > .93 || fox.turn <= 0) { fox.x = Math.max(.05, Math.min(.95, fox.x)); fox.y = Math.max(.07, Math.min(.93, fox.y)); fox.turn = 1.2 + Math.random() * 2.4; randomFoxDirection(); }
     const distance = Math.hypot((player.x - fox.x) * width, (player.y - fox.y) * height);
-    if (distance < 170) {
-      health -= (distance < 95 ? 34 : 13) * delta;
+    if (distance <= player.radius + fox.radius && damageCooldown === 0) {
+      health -= 5;
+      damageCooldown = .5;
+      burnTimer = .5;
       updateHealth();
-      if (health > 0) status.textContent = 'Danger close';
+      if (health > 0) status.textContent = 'Burning -5 health';
       if (health <= 0) endGame(false);
     }
     if (elapsed >= targetTime) endGame(true);
@@ -334,7 +338,7 @@ permalink: /forest-chase/
     ctx.beginPath(); ctx.moveTo(x, y - 65 * scale); ctx.lineTo(x - 45 * scale, y + 35 * scale); ctx.lineTo(x + 45 * scale, y + 35 * scale); ctx.closePath(); ctx.fill();
   }
 
-  function drawCharacter(x, y, isFox) {
+  function drawCharacter(x, y, isFox, isBurning = false) {
     const px = x * width, py = y * height;
     ctx.save(); ctx.translate(px, py + Math.sin(player.bob) * (isFox ? 2 : 3));
     ctx.fillStyle = 'rgba(4, 12, 8, .35)'; ctx.beginPath(); ctx.ellipse(0, 20, isFox ? 27 : 20, 7, 0, 0, Math.PI * 2); ctx.fill();
@@ -343,6 +347,12 @@ permalink: /forest-chase/
       ctx.fillStyle = '#fff1d2'; ctx.beginPath(); ctx.ellipse(9, 1, 12, 9, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#1a1712'; ctx.beginPath(); ctx.arc(14, -2, 2.5, 0, Math.PI * 2); ctx.arc(24, 1, 2, 0, Math.PI * 2); ctx.fill();
     } else {
+      if (isBurning) {
+        ctx.fillStyle = '#ff9f43';
+        ctx.beginPath(); ctx.moveTo(-15, 15); ctx.quadraticCurveTo(-20, 1, -10, 7); ctx.quadraticCurveTo(-9, -5, 0, 6); ctx.quadraticCurveTo(5, -7, 11, 6); ctx.quadraticCurveTo(21, 0, 15, 16); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ffe66d';
+        ctx.beginPath(); ctx.moveTo(-9, 14); ctx.quadraticCurveTo(-11, 5, -3, 9); ctx.quadraticCurveTo(0, 1, 5, 10); ctx.quadraticCurveTo(10, 5, 10, 15); ctx.closePath(); ctx.fill();
+      }
       ctx.fillStyle = '#d9a46d'; ctx.beginPath(); ctx.arc(0, -22, 10, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#d7f171'; ctx.fillRect(-11, -11, 22, 27);
       ctx.strokeStyle = '#d9a46d'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-7, 15); ctx.lineTo(-13, 28); ctx.moveTo(7, 15); ctx.lineTo(13, 28); ctx.moveTo(-10, -5); ctx.lineTo(-21, 4); ctx.moveTo(10, -5); ctx.lineTo(21, -1); ctx.stroke();
@@ -357,7 +367,7 @@ permalink: /forest-chase/
     for (let i = 0; i < 13; i++) drawTree((i * 97 + 33) % width, height * (.3 + (i % 4) * .07), .55 + (i % 3) * .15, i % 2 ? '#1e4a35' : '#28553a');
     ctx.fillStyle = '#294b32'; ctx.fillRect(0, height * .72, width, height * .28);
     for (let i = 0; i < 45; i++) { ctx.fillStyle = i % 3 ? 'rgba(118, 155, 84, .3)' : 'rgba(208, 216, 119, .45)'; ctx.fillRect((i * 83) % width, height * (.74 + (i % 5) * .045), 2, 8 + (i % 4) * 3); }
-    drawCharacter(fox.x, fox.y, true); drawCharacter(player.x, player.y, false);
+    drawCharacter(fox.x, fox.y, true); drawCharacter(player.x, player.y, false, burnTimer > 0);
     particles.forEach((particle) => { ctx.globalAlpha = particle.life; ctx.fillStyle = particle.red ? '#b83232' : '#4d1818'; ctx.beginPath(); ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2); ctx.fill(); }); ctx.globalAlpha = 1;
   }
 
