@@ -1,0 +1,343 @@
+---
+layout: gamebuilder
+title: Forest Chase
+permalink: /forest-chase/
+---
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+  :root {
+    --forest-ink: #f4f1de;
+    --forest-muted: #a9b8a5;
+    --forest-lime: #d7f171;
+    --forest-red: #ff6b5c;
+    --forest-night: #101b18;
+  }
+
+  .forest-chase-page {
+    min-height: 100vh;
+    padding: clamp(1.5rem, 4vw, 4rem) 1rem;
+    color: var(--forest-ink);
+    font-family: 'Space Grotesk', sans-serif;
+    background:
+      radial-gradient(circle at 12% 5%, rgba(106, 157, 107, .25), transparent 28rem),
+      linear-gradient(135deg, #152821 0%, #0d1614 55%, #241d17 100%);
+  }
+
+  .forest-chase-shell {
+    width: min(1120px, 100%);
+    margin: 0 auto;
+  }
+
+  .forest-chase-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: end;
+    margin-bottom: 1rem;
+  }
+
+  .forest-chase-kicker,
+  .forest-chase-stat-label,
+  .forest-chase-status {
+    color: var(--forest-lime);
+    font: 500 .73rem 'DM Mono', monospace;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .forest-chase-heading h1 {
+    margin: .35rem 0 0;
+    color: #fffce9;
+    font-size: clamp(2rem, 5vw, 4.4rem);
+    line-height: .95;
+  }
+
+  .forest-chase-heading p {
+    max-width: 23rem;
+    margin: 0;
+    color: var(--forest-muted);
+    text-align: right;
+    font-size: .95rem;
+  }
+
+  .forest-chase-frame {
+    overflow: hidden;
+    border: 1px solid rgba(244, 241, 222, .18);
+    background: #1b2a22;
+    box-shadow: 0 2rem 5rem rgba(0, 0, 0, .34);
+  }
+
+  .forest-chase-toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .75rem 1rem;
+    background: rgba(11, 19, 16, .86);
+  }
+
+  .forest-chase-stats { display: flex; gap: clamp(1rem, 5vw, 3rem); }
+  .forest-chase-stat { display: grid; gap: .2rem; }
+  .forest-chase-stat-value { font: 500 1.25rem 'DM Mono', monospace; }
+  .forest-chase-status { align-self: center; color: var(--forest-muted); }
+
+  .forest-chase-stage { position: relative; background: #20362a; }
+  #forest-chase-canvas { display: block; width: 100%; height: min(68vh, 650px); min-height: 390px; }
+
+  .forest-chase-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    background: rgba(8, 14, 12, .3);
+    pointer-events: none;
+  }
+
+  .forest-chase-message {
+    max-width: 27rem;
+    padding: 1.5rem;
+    border: 1px solid rgba(244, 241, 222, .2);
+    background: rgba(16, 27, 24, .92);
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, .3);
+    text-align: center;
+    pointer-events: auto;
+  }
+
+  .forest-chase-message h2 { margin: 0 0 .65rem; font-size: 1.7rem; }
+  .forest-chase-message p { margin: 0 0 1.15rem; color: var(--forest-muted); line-height: 1.5; }
+  .forest-chase-button {
+    border: 0;
+    padding: .8rem 1.2rem;
+    color: #172116;
+    background: var(--forest-lime);
+    font: 700 .85rem 'DM Mono', monospace;
+    cursor: pointer;
+    transition: transform .2s ease, background .2s ease;
+  }
+  .forest-chase-button:hover { background: #efff9f; transform: translateY(-2px); }
+
+  .forest-chase-help {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .85rem 1rem;
+    color: var(--forest-muted);
+    font: .75rem 'DM Mono', monospace;
+  }
+
+  .forest-chase-pad { display: none; gap: .3rem; grid-template-columns: repeat(3, 2.65rem); margin: 0 auto 1rem; width: max-content; }
+  .forest-chase-pad button { width: 2.65rem; height: 2.65rem; border: 1px solid rgba(244, 241, 222, .24); color: var(--forest-ink); background: rgba(16, 27, 24, .82); font-size: 1.1rem; }
+  .forest-chase-pad button:nth-child(1) { grid-column: 2; }
+  .forest-chase-pad button:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .forest-chase-pad button:nth-child(3) { grid-column: 2; grid-row: 2; }
+  .forest-chase-pad button:nth-child(4) { grid-column: 3; grid-row: 2; }
+
+  @media (max-width: 640px) {
+    .forest-chase-heading { display: block; }
+    .forest-chase-heading p { margin-top: .9rem; text-align: left; }
+    .forest-chase-toolbar { align-items: start; }
+    .forest-chase-status { max-width: 8rem; text-align: right; }
+    .forest-chase-help { display: block; text-align: center; }
+    .forest-chase-pad { display: grid; }
+    #forest-chase-canvas { min-height: 430px; height: 62vh; }
+  }
+</style>
+
+<main class="forest-chase-page">
+  <div class="forest-chase-shell">
+    <header class="forest-chase-heading">
+      <div>
+        <div class="forest-chase-kicker">Field Exercise 07 / Night Run</div>
+        <h1>Forest Chase</h1>
+      </div>
+      <p>Outrun the fox for 60 seconds. It is faster. The forest is not on your side.</p>
+    </header>
+
+    <section class="forest-chase-frame" aria-label="Forest Chase game">
+      <div class="forest-chase-toolbar">
+        <div class="forest-chase-stats">
+          <div class="forest-chase-stat"><span class="forest-chase-stat-label">Time</span><span class="forest-chase-stat-value" id="forest-chase-time">00:00</span></div>
+          <div class="forest-chase-stat"><span class="forest-chase-stat-label">Best</span><span class="forest-chase-stat-value" id="forest-chase-best">00:00</span></div>
+        </div>
+        <span class="forest-chase-status" id="forest-chase-status">Ready to run</span>
+      </div>
+      <div class="forest-chase-stage">
+        <canvas id="forest-chase-canvas" aria-label="A human running from a fox in a forest"></canvas>
+        <div class="forest-chase-overlay" id="forest-chase-overlay">
+          <div class="forest-chase-message">
+            <h2 id="forest-chase-message-title">The woods are listening.</h2>
+            <p id="forest-chase-message-copy">Keep moving. Use WASD or the arrow keys to stay ahead of the hunter.</p>
+            <button class="forest-chase-button" id="forest-chase-start" type="button">Start the run</button>
+          </div>
+        </div>
+      </div>
+      <div class="forest-chase-pad" aria-label="Touch movement controls">
+        <button type="button" data-direction="up" aria-label="Move up">&#9650;</button>
+        <button type="button" data-direction="left" aria-label="Move left">&#9664;</button>
+        <button type="button" data-direction="down" aria-label="Move down">&#9660;</button>
+        <button type="button" data-direction="right" aria-label="Move right">&#9654;</button>
+      </div>
+      <div class="forest-chase-help"><span>WASD / ARROW KEYS TO MOVE</span><span>ESC TO PAUSE</span></div>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+  const canvas = document.getElementById('forest-chase-canvas');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('forest-chase-overlay');
+  const startButton = document.getElementById('forest-chase-start');
+  const title = document.getElementById('forest-chase-message-title');
+  const copy = document.getElementById('forest-chase-message-copy');
+  const status = document.getElementById('forest-chase-status');
+  const timeReadout = document.getElementById('forest-chase-time');
+  const bestReadout = document.getElementById('forest-chase-best');
+  const targetTime = 60;
+  const keys = new Set();
+  const particles = [];
+  let width = 0, height = 0, lastFrame = 0, elapsed = 0, running = false, paused = false, outcome = '';
+  let audioContext;
+  const best = Number(localStorage.getItem('forest-chase-best') || 0);
+  bestReadout.textContent = formatTime(best);
+  const player = { x: .22, y: .5, radius: 15, speed: 225, bob: 0 };
+  const fox = { x: .78, y: .46, radius: 21, speed: 330, dx: 1, dy: .2, turn: 0 };
+
+  function formatTime(seconds) {
+    return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+  }
+
+  function resize() {
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    width = rect.width;
+    height = rect.height;
+    canvas.width = Math.floor(width * ratio);
+    canvas.height = Math.floor(height * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+
+  function randomFoxDirection() {
+    const angle = Math.random() * Math.PI * 2;
+    fox.dx = Math.cos(angle);
+    fox.dy = Math.sin(angle);
+    fox.speed = 310 + Math.random() * 85;
+  }
+
+  function reset() {
+    player.x = .2; player.y = .54; player.bob = 0;
+    fox.x = .8; fox.y = .42; fox.turn = 0; randomFoxDirection();
+    elapsed = 0; outcome = ''; particles.length = 0; paused = false;
+    timeReadout.textContent = '00:00'; status.textContent = 'Hunter loose';
+  }
+
+  function startAudio() {
+    audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+    audioContext.resume();
+  }
+
+  function playExplosion() {
+    if (!audioContext) return;
+    const now = audioContext.currentTime;
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = 'sawtooth';
+    oscillator.frequency.setValueAtTime(130, now);
+    oscillator.frequency.exponentialRampToValueAtTime(38, now + .45);
+    gain.gain.setValueAtTime(.18, now);
+    gain.gain.exponentialRampToValueAtTime(.001, now + .45);
+    oscillator.connect(gain).connect(audioContext.destination);
+    oscillator.start(now); oscillator.stop(now + .45);
+  }
+
+  function burst() {
+    for (let i = 0; i < 75; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 40 + Math.random() * 260;
+      particles.push({ x: player.x * width, y: player.y * height, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 1, size: 2 + Math.random() * 5, red: Math.random() > .25 });
+    }
+  }
+
+  function endGame(won) {
+    running = false; outcome = won ? 'won' : 'caught';
+    if (!won) { burst(); playExplosion(); }
+    const score = Math.floor(elapsed);
+    if (score > Number(localStorage.getItem('forest-chase-best') || 0)) { localStorage.setItem('forest-chase-best', score); bestReadout.textContent = formatTime(score); }
+    title.textContent = won ? 'You made it out.' : 'The fox caught you.';
+    copy.textContent = won ? 'The trees thin out ahead. You survived the full run.' : 'A flash of red, then silence. Try a wider route and keep your distance.';
+    startButton.textContent = 'Run it again';
+    status.textContent = won ? 'Run complete' : 'Run ended';
+    overlay.style.display = 'grid';
+  }
+
+  function update(delta) {
+    if (!running || paused) return;
+    elapsed += delta;
+    timeReadout.textContent = formatTime(elapsed);
+    const horizontal = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0);
+    const vertical = (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) - (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
+    const length = Math.hypot(horizontal, vertical) || 1;
+    player.x = Math.max(.035, Math.min(.965, player.x + horizontal / length * player.speed * delta / width));
+    player.y = Math.max(.07, Math.min(.93, player.y + vertical / length * player.speed * delta / height));
+    player.bob += delta * (horizontal || vertical ? 12 : 3);
+
+    fox.x += fox.dx * fox.speed * delta / width;
+    fox.y += fox.dy * fox.speed * delta / height;
+    fox.turn -= delta;
+    if (fox.x < .05 || fox.x > .95 || fox.y < .07 || fox.y > .93 || fox.turn <= 0) { fox.x = Math.max(.05, Math.min(.95, fox.x)); fox.y = Math.max(.07, Math.min(.93, fox.y)); fox.turn = 1.2 + Math.random() * 2.4; randomFoxDirection(); }
+    if (Math.hypot((player.x - fox.x) * width, (player.y - fox.y) * height) < player.radius + fox.radius) { endGame(false); }
+    if (elapsed >= targetTime) endGame(true);
+  }
+
+  function drawTree(x, y, scale, color) {
+    ctx.fillStyle = '#382d21'; ctx.fillRect(x - 5 * scale, y, 10 * scale, height * .25 * scale);
+    ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(x, y - 100 * scale); ctx.lineTo(x - 55 * scale, y + 5 * scale); ctx.lineTo(x + 55 * scale, y + 5 * scale); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x, y - 65 * scale); ctx.lineTo(x - 45 * scale, y + 35 * scale); ctx.lineTo(x + 45 * scale, y + 35 * scale); ctx.closePath(); ctx.fill();
+  }
+
+  function drawCharacter(x, y, isFox) {
+    const px = x * width, py = y * height;
+    ctx.save(); ctx.translate(px, py + Math.sin(player.bob) * (isFox ? 2 : 3));
+    ctx.fillStyle = 'rgba(4, 12, 8, .35)'; ctx.beginPath(); ctx.ellipse(0, 20, isFox ? 27 : 20, 7, 0, 0, Math.PI * 2); ctx.fill();
+    if (isFox) {
+      ctx.fillStyle = '#db583d'; ctx.beginPath(); ctx.moveTo(-21, -9); ctx.lineTo(-16, -30); ctx.lineTo(-4, -19); ctx.lineTo(10, -28); ctx.lineTo(25, -7); ctx.quadraticCurveTo(20, 13, 0, 15); ctx.quadraticCurveTo(-19, 12, -21, -9); ctx.fill();
+      ctx.fillStyle = '#fff1d2'; ctx.beginPath(); ctx.ellipse(9, 1, 12, 9, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1a1712'; ctx.beginPath(); ctx.arc(14, -2, 2.5, 0, Math.PI * 2); ctx.arc(24, 1, 2, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.fillStyle = '#d9a46d'; ctx.beginPath(); ctx.arc(0, -22, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#d7f171'; ctx.fillRect(-11, -11, 22, 27);
+      ctx.strokeStyle = '#d9a46d'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-7, 15); ctx.lineTo(-13, 28); ctx.moveTo(7, 15); ctx.lineTo(13, 28); ctx.moveTo(-10, -5); ctx.lineTo(-21, 4); ctx.moveTo(10, -5); ctx.lineTo(21, -1); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, width, height);
+    const sky = ctx.createLinearGradient(0, 0, 0, height); sky.addColorStop(0, '#243b35'); sky.addColorStop(1, '#13241d'); ctx.fillStyle = sky; ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = 'rgba(223, 225, 167, .14)'; ctx.beginPath(); ctx.arc(width * .78, height * .2, 48, 0, Math.PI * 2); ctx.fill();
+    for (let i = 0; i < 13; i++) drawTree((i * 97 + 33) % width, height * (.3 + (i % 4) * .07), .55 + (i % 3) * .15, i % 2 ? '#1e4a35' : '#28553a');
+    ctx.fillStyle = '#294b32'; ctx.fillRect(0, height * .72, width, height * .28);
+    for (let i = 0; i < 45; i++) { ctx.fillStyle = i % 3 ? 'rgba(118, 155, 84, .3)' : 'rgba(208, 216, 119, .45)'; ctx.fillRect((i * 83) % width, height * (.74 + (i % 5) * .045), 2, 8 + (i % 4) * 3); }
+    drawCharacter(fox.x, fox.y, true); drawCharacter(player.x, player.y, false);
+    particles.forEach((particle) => { ctx.globalAlpha = particle.life; ctx.fillStyle = particle.red ? '#b83232' : '#4d1818'; ctx.beginPath(); ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2); ctx.fill(); }); ctx.globalAlpha = 1;
+  }
+
+  function frame(timestamp) {
+    const delta = Math.min((timestamp - lastFrame) / 1000 || 0, .05); lastFrame = timestamp;
+    particles.forEach((particle) => { particle.x += particle.vx * delta; particle.y += particle.vy * delta; particle.vy += 240 * delta; particle.life -= delta * 1.2; });
+    while (particles.length && particles[0].life <= 0) particles.shift();
+    update(delta); draw(); requestAnimationFrame(frame);
+  }
+
+  startButton.addEventListener('click', () => { startAudio(); reset(); running = true; overlay.style.display = 'none'; });
+  window.addEventListener('keydown', (event) => { if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(event.code)) event.preventDefault(); if (event.code === 'Escape' && running) { paused = !paused; status.textContent = paused ? 'Paused' : 'Hunter loose'; } keys.add(event.code); });
+  window.addEventListener('keyup', (event) => keys.delete(event.code));
+  document.querySelectorAll('[data-direction]').forEach((button) => {
+    const code = { up: 'ArrowUp', left: 'ArrowLeft', down: 'ArrowDown', right: 'ArrowRight' }[button.dataset.direction];
+    button.addEventListener('pointerdown', () => keys.add(code)); button.addEventListener('pointerup', () => keys.delete(code)); button.addEventListener('pointerleave', () => keys.delete(code));
+  });
+  window.addEventListener('resize', resize); resize(); requestAnimationFrame(frame);
+})();
+</script>
