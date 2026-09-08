@@ -247,7 +247,7 @@ permalink: /forest-chase/
     const angle = Math.random() * Math.PI * 2;
     hunter.dx = Math.cos(angle);
     hunter.dy = Math.sin(angle);
-    hunter.speed = 560 + Math.random() * 140;
+    hunter.speed = hunter === secondFox ? 850 + Math.random() * 200 : 560 + Math.random() * 140;
   }
 
   function reset() {
