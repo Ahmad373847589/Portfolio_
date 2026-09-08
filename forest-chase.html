@@ -196,7 +196,7 @@ permalink: /forest-chase/
         <button type="button" data-direction="down" aria-label="Move down">&#9660;</button>
         <button type="button" data-direction="right" aria-label="Move right">&#9654;</button>
       </div>
-      <div class="forest-chase-help"><span>WASD / ARROW KEYS TO MOVE</span><span>ESC TO PAUSE</span></div>
+      <div class="forest-chase-help"><span>WASD / ARROW KEYS TO MOVE</span><span id="forest-chase-hunter-count">1 HUNTER</span><span>ESC TO PAUSE</span></div>
     </section>
   </div>
 </main>
@@ -217,6 +217,7 @@ permalink: /forest-chase/
   const healthFill = document.getElementById('forest-chase-health-fill');
   const healthValue = document.getElementById('forest-chase-health-value');
   const healthTrack = document.querySelector('.forest-chase-health-track');
+  const hunterCount = document.getElementById('forest-chase-hunter-count');
   const targetTime = 60;
   const keys = new Set();
   const particles = [];
@@ -255,6 +256,7 @@ permalink: /forest-chase/
     secondFox.x = .68; secondFox.y = .78; secondFox.turn = 0; randomFoxDirection(secondFox);
     elapsed = 0; health = 100; damageCooldown = 0; burnTimer = 0; secondFoxActive = false; outcome = ''; particles.length = 0; paused = false;
     timeReadout.textContent = '00:00'; status.textContent = 'Hunter loose';
+    hunterCount.textContent = '1 HUNTER';
     updateHealth();
   }
 
@@ -332,6 +334,7 @@ permalink: /forest-chase/
     if (!secondFoxActive && elapsed >= 30) {
       secondFoxActive = true;
       status.textContent = 'Second hunter loose';
+      hunterCount.textContent = '2 HUNTERS';
     }
     const touchingFox = [fox, ...(secondFoxActive ? [secondFox] : [])].some((hunter) => Math.hypot((player.x - hunter.x) * width, (player.y - hunter.y) * height) <= player.radius + hunter.radius);
     if (touchingFox && damageCooldown === 0) {
@@ -351,12 +354,12 @@ permalink: /forest-chase/
     ctx.beginPath(); ctx.moveTo(x, y - 65 * scale); ctx.lineTo(x - 45 * scale, y + 35 * scale); ctx.lineTo(x + 45 * scale, y + 35 * scale); ctx.closePath(); ctx.fill();
   }
 
-  function drawCharacter(x, y, isFox, isBurning = false) {
+  function drawCharacter(x, y, isFox, isBurning = false, isSecondFox = false) {
     const px = x * width, py = y * height;
     ctx.save(); ctx.translate(px, py + Math.sin(player.bob) * (isFox ? 2 : 3));
     ctx.fillStyle = 'rgba(4, 12, 8, .35)'; ctx.beginPath(); ctx.ellipse(0, 20, isFox ? 27 : 20, 7, 0, 0, Math.PI * 2); ctx.fill();
     if (isFox) {
-      ctx.fillStyle = '#db583d'; ctx.beginPath(); ctx.moveTo(-21, -9); ctx.lineTo(-16, -30); ctx.lineTo(-4, -19); ctx.lineTo(10, -28); ctx.lineTo(25, -7); ctx.quadraticCurveTo(20, 13, 0, 15); ctx.quadraticCurveTo(-19, 12, -21, -9); ctx.fill();
+      ctx.fillStyle = isSecondFox ? '#ff8a4c' : '#db583d'; ctx.beginPath(); ctx.moveTo(-21, -9); ctx.lineTo(-16, -30); ctx.lineTo(-4, -19); ctx.lineTo(10, -28); ctx.lineTo(25, -7); ctx.quadraticCurveTo(20, 13, 0, 15); ctx.quadraticCurveTo(-19, 12, -21, -9); ctx.fill();
       ctx.fillStyle = '#fff1d2'; ctx.beginPath(); ctx.ellipse(9, 1, 12, 9, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#1a1712'; ctx.beginPath(); ctx.arc(14, -2, 2.5, 0, Math.PI * 2); ctx.arc(24, 1, 2, 0, Math.PI * 2); ctx.fill();
     } else {
@@ -381,7 +384,7 @@ permalink: /forest-chase/
     ctx.fillStyle = '#294b32'; ctx.fillRect(0, height * .72, width, height * .28);
     for (let i = 0; i < 45; i++) { ctx.fillStyle = i % 3 ? 'rgba(118, 155, 84, .3)' : 'rgba(208, 216, 119, .45)'; ctx.fillRect((i * 83) % width, height * (.74 + (i % 5) * .045), 2, 8 + (i % 4) * 3); }
     drawCharacter(fox.x, fox.y, true);
-    if (secondFoxActive) drawCharacter(secondFox.x, secondFox.y, true);
+    if (secondFoxActive) drawCharacter(secondFox.x, secondFox.y, true, false, true);
     drawCharacter(player.x, player.y, false, burnTimer > 0);
     particles.forEach((particle) => { ctx.globalAlpha = particle.life; ctx.fillStyle = particle.red ? '#b83232' : '#4d1818'; ctx.beginPath(); ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2); ctx.fill(); }); ctx.globalAlpha = 1;
   }
