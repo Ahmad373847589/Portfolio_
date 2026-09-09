@@ -248,6 +248,13 @@ permalink: /forest-chase/
   const fox = { x: .78, y: .46, radius: 21, speed: 330, dx: 1, dy: .2, turn: 0 };
   const secondFox = { x: .68, y: .78, radius: 21, speed: 330, dx: -1, dy: -.2, turn: 0 };
   const thirdFox = { x: .46, y: .18, radius: 21, speed: 330, dx: .4, dy: 1, turn: 0 };
+  const obstacles = [
+    { x: .34, y: .28, radius: 27, type: 'rock' },
+    { x: .57, y: .34, radius: 34, type: 'log' },
+    { x: .42, y: .72, radius: 25, type: 'rock' },
+    { x: .78, y: .72, radius: 30, type: 'log' },
+    { x: .15, y: .82, radius: 22, type: 'rock' }
+  ];
 
   function formatTime(seconds) {
     return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
@@ -373,8 +380,10 @@ permalink: /forest-chase/
     const horizontal = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0);
     const vertical = (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) - (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
     const length = Math.hypot(horizontal, vertical) || 1;
-    player.x = Math.max(.035, Math.min(.965, player.x + horizontal / length * player.speed * delta / width));
-    player.y = Math.max(.07, Math.min(.93, player.y + vertical / length * player.speed * delta / height));
+    const nearObstacle = obstacles.some((obstacle) => Math.hypot((player.x - obstacle.x) * width, (player.y - obstacle.y) * height) <= obstacle.radius + player.radius + 12);
+    const movementSpeed = nearObstacle ? player.speed * .62 : player.speed;
+    player.x = Math.max(.035, Math.min(.965, player.x + horizontal / length * movementSpeed * delta / width));
+    player.y = Math.max(.07, Math.min(.93, player.y + vertical / length * movementSpeed * delta / height));
     player.bob += delta * (horizontal || vertical ? 12 : 3);
 
     [fox, ...(secondFoxActive ? [secondFox] : []), ...(thirdFoxActive ? [thirdFox] : [])].forEach((hunter) => {
@@ -436,6 +445,26 @@ permalink: /forest-chase/
     ctx.beginPath(); ctx.moveTo(x, y - 65 * scale); ctx.lineTo(x - 45 * scale, y + 35 * scale); ctx.lineTo(x + 45 * scale, y + 35 * scale); ctx.closePath(); ctx.fill();
   }
 
+  function drawObstacle(obstacle) {
+    const x = obstacle.x * width;
+    const y = obstacle.y * height;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = 'rgba(4, 12, 8, .28)';
+    ctx.beginPath(); ctx.ellipse(0, obstacle.radius * .55, obstacle.radius * 1.25, obstacle.radius * .32, 0, 0, Math.PI * 2); ctx.fill();
+    if (obstacle.type === 'log') {
+      ctx.rotate(-.18);
+      ctx.fillStyle = '#5a3b29'; ctx.fillRect(-obstacle.radius * 1.25, -9, obstacle.radius * 2.5, 18);
+      ctx.fillStyle = '#9a7048'; ctx.beginPath(); ctx.ellipse(-obstacle.radius * 1.25, 0, 9, 10, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#d1a16b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(-obstacle.radius * 1.25, 0, 5, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#6f9d55'; ctx.beginPath(); ctx.arc(-obstacle.radius * .3, -12, 8, 0, Math.PI * 2); ctx.arc(obstacle.radius * .25, -11, 7, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.fillStyle = '#4c5543'; ctx.beginPath(); ctx.moveTo(-obstacle.radius, 8); ctx.lineTo(-obstacle.radius * .6, -obstacle.radius * .7); ctx.lineTo(obstacle.radius * .45, -obstacle.radius); ctx.lineTo(obstacle.radius, 8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#78806a'; ctx.beginPath(); ctx.moveTo(-obstacle.radius * .6, -obstacle.radius * .7); ctx.lineTo(obstacle.radius * .45, -obstacle.radius); ctx.lineTo(obstacle.radius * .15, -obstacle.radius * .35); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function drawCharacter(x, y, isFox, isBurning = false, isSecondFox = false, isBuffedFox = false) {
     const px = x * width, py = y * height;
     ctx.save(); ctx.translate(px, py + Math.sin(player.bob) * (isFox ? 2 : 3));
@@ -479,6 +508,7 @@ permalink: /forest-chase/
     ctx.strokeStyle = 'rgba(117, 164, 101, .28)'; ctx.lineWidth = 1;
     for (let i = 0; i < 22; i++) { const x = (i * 71) % width; const y = height * (.74 + (i % 5) * .045); ctx.beginPath(); ctx.moveTo(x, y + 9); ctx.lineTo(x - 4, y); ctx.moveTo(x, y + 9); ctx.lineTo(x + 5, y - 2); ctx.stroke(); }
     for (let i = 0; i < 18; i++) { ctx.fillStyle = i % 2 ? 'rgba(215, 241, 113, .55)' : 'rgba(255, 213, 106, .5)'; ctx.shadowBlur = 9; ctx.shadowColor = ctx.fillStyle; ctx.beginPath(); ctx.arc((i * 113 + 20) % width, height * (.42 + (i % 7) * .05), 1.8, 0, Math.PI * 2); ctx.fill(); } ctx.shadowBlur = 0;
+    obstacles.forEach(drawObstacle);
     arrows.forEach((arrow) => {
       const angle = Math.atan2(arrow.vy, arrow.vx);
       ctx.save(); ctx.translate(arrow.x, arrow.y); ctx.rotate(angle);
