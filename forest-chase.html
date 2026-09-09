@@ -94,6 +94,11 @@ permalink: /forest-chase/
   .forest-chase-health-value { color: var(--forest-ink); font: 500 .75rem 'DM Mono', monospace; }
   .forest-chase-health-track { height: .45rem; overflow: hidden; border: 1px solid rgba(244, 241, 222, .12); border-radius: 999px; background: rgba(244, 241, 222, .1); }
   .forest-chase-health-fill { display: block; width: 100%; height: 100%; border-radius: inherit; background: var(--forest-lime); box-shadow: 0 0 12px rgba(215, 241, 113, .45); transition: width .15s linear, background .2s ease; }
+  .forest-chase-stamina { display: grid; gap: .25rem; min-width: clamp(7rem, 16vw, 9rem); }
+  .forest-chase-stamina-row { display: flex; justify-content: space-between; gap: .75rem; align-items: center; }
+  .forest-chase-stamina-value { color: var(--forest-ink); font: 500 .75rem 'DM Mono', monospace; }
+  .forest-chase-stamina-track { height: .45rem; overflow: hidden; border: 1px solid rgba(244, 241, 222, .12); border-radius: 999px; background: rgba(244, 241, 222, .1); }
+  .forest-chase-stamina-fill { display: block; width: 100%; height: 100%; border-radius: inherit; background: #69c4b0; box-shadow: 0 0 12px rgba(105, 196, 176, .45); transition: width .15s linear; }
   .forest-chase-toolbar-actions { display: flex; align-items: center; gap: 1rem; }
   .forest-chase-fullscreen { border: 1px solid rgba(244, 241, 222, .2); border-radius: 4px; padding: .55rem .7rem; color: var(--forest-ink); background: transparent; font: 500 .7rem 'DM Mono', monospace; cursor: pointer; transition: border-color .2s ease, color .2s ease, background .2s ease; }
   .forest-chase-fullscreen:hover, .forest-chase-fullscreen:focus-visible { border-color: var(--forest-lime); color: var(--forest-lime); background: rgba(215, 241, 113, .08); outline: none; }
@@ -190,6 +195,10 @@ permalink: /forest-chase/
             <div class="forest-chase-health-row"><span class="forest-chase-stat-label">Health</span><span class="forest-chase-health-value" id="forest-chase-health-value">100%</span></div>
             <div class="forest-chase-health-track" role="progressbar" aria-label="Player health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span class="forest-chase-health-fill" id="forest-chase-health-fill"></span></div>
           </div>
+          <div class="forest-chase-stamina">
+            <div class="forest-chase-stamina-row"><span class="forest-chase-stat-label">Stamina</span><span class="forest-chase-stamina-value" id="forest-chase-stamina-value">100%</span></div>
+            <div class="forest-chase-stamina-track" role="progressbar" aria-label="Sprint stamina" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span class="forest-chase-stamina-fill" id="forest-chase-stamina-fill"></span></div>
+          </div>
         </div>
         <div class="forest-chase-toolbar-actions">
           <span class="forest-chase-status" id="forest-chase-status">Ready to run</span>
@@ -212,7 +221,7 @@ permalink: /forest-chase/
         <button type="button" data-direction="down" aria-label="Move down">&#9660;</button>
         <button type="button" data-direction="right" aria-label="Move right">&#9654;</button>
       </div>
-      <div class="forest-chase-help"><span>WASD / ARROW KEYS TO MOVE</span><span id="forest-chase-hunter-count">1 HUNTER</span><span>ESC TO PAUSE</span></div>
+      <div class="forest-chase-help"><span>WASD / ARROWS MOVE &middot; SHIFT SPRINT</span><span id="forest-chase-hunter-count">1 HUNTER</span><span>ESC TO PAUSE</span></div>
     </section>
   </div>
 </main>
@@ -233,6 +242,9 @@ permalink: /forest-chase/
   const healthFill = document.getElementById('forest-chase-health-fill');
   const healthValue = document.getElementById('forest-chase-health-value');
   const healthTrack = document.querySelector('.forest-chase-health-track');
+  const staminaFill = document.getElementById('forest-chase-stamina-fill');
+  const staminaValue = document.getElementById('forest-chase-stamina-value');
+  const staminaTrack = document.querySelector('.forest-chase-stamina-track');
   const hunterCount = document.getElementById('forest-chase-hunter-count');
   const levelReadout = document.getElementById('forest-chase-level');
   const levelOneTarget = 60;
@@ -240,7 +252,7 @@ permalink: /forest-chase/
   const keys = new Set();
   const particles = [];
   const arrows = [];
-  let width = 0, height = 0, lastFrame = 0, elapsed = 0, health = 100, damageCooldown = 0, burnTimer = 0, arrowCooldown = 0, level = 1, secondFoxActive = false, thirdFoxActive = false, running = false, paused = false, outcome = '';
+  let width = 0, height = 0, lastFrame = 0, elapsed = 0, health = 100, stamina = 100, damageCooldown = 0, burnTimer = 0, arrowCooldown = 0, level = 1, secondFoxActive = false, thirdFoxActive = false, running = false, paused = false, outcome = '';
   let audioContext;
   const best = Number(localStorage.getItem('forest-chase-best') || 0);
   bestReadout.textContent = formatTime(best);
@@ -248,6 +260,13 @@ permalink: /forest-chase/
   const fox = { x: .78, y: .46, radius: 21, speed: 330, dx: 1, dy: .2, turn: 0 };
   const secondFox = { x: .68, y: .78, radius: 21, speed: 330, dx: -1, dy: -.2, turn: 0 };
   const thirdFox = { x: .46, y: .18, radius: 21, speed: 330, dx: .4, dy: 1, turn: 0 };
+  const fireflies = [
+    { x: .12, y: .28, active: true },
+    { x: .69, y: .2, active: true },
+    { x: .88, y: .58, active: true },
+    { x: .31, y: .86, active: true },
+    { x: .58, y: .64, active: true }
+  ];
   const obstacles = [
     { x: .34, y: .28, radius: 27, type: 'rock' },
     { x: .57, y: .34, radius: 34, type: 'log' },
@@ -274,7 +293,7 @@ permalink: /forest-chase/
     const angle = Math.random() * Math.PI * 2;
     hunter.dx = Math.cos(angle);
     hunter.dy = Math.sin(angle);
-    hunter.speed = level === 2 ? 900 + Math.random() * 220 : hunter === thirdFox ? 1000 + Math.random() * 220 : hunter === secondFox ? 850 + Math.random() * 200 : 560 + Math.random() * 140;
+    hunter.speed = level === 2 ? 1050 + Math.random() * 250 : hunter === thirdFox ? 1150 + Math.random() * 200 : hunter === secondFox ? 950 + Math.random() * 180 : 680 + Math.random() * 160;
   }
 
   function reset() {
@@ -283,15 +302,16 @@ permalink: /forest-chase/
     fox.x = .8; fox.y = .42; fox.radius = 21; fox.turn = 0; randomFoxDirection(fox);
     secondFox.x = .68; secondFox.y = .78; secondFox.turn = 0; randomFoxDirection(secondFox);
     thirdFox.x = .46; thirdFox.y = .18; thirdFox.turn = 0; randomFoxDirection(thirdFox);
-    elapsed = 0; health = 100; damageCooldown = 0; burnTimer = 0; arrowCooldown = 0; secondFoxActive = false; thirdFoxActive = false; outcome = ''; particles.length = 0; arrows.length = 0; paused = false;
+    elapsed = 0; health = 100; stamina = 100; damageCooldown = 0; burnTimer = 0; arrowCooldown = 0; secondFoxActive = false; thirdFoxActive = false; outcome = ''; particles.length = 0; arrows.length = 0; fireflies.forEach((firefly) => { firefly.active = true; }); paused = false;
     levelReadout.textContent = '01'; timeReadout.textContent = '00:00'; status.textContent = 'Hunter loose';
     hunterCount.textContent = '1 HUNTER';
     updateHealth();
+    updateStamina();
   }
 
   function startLevelTwo() {
     level = 2;
-    elapsed = 0; health = 100; damageCooldown = 0; burnTimer = 0; arrowCooldown = .25; particles.length = 0; arrows.length = 0; paused = false; outcome = '';
+    elapsed = 0; health = 100; stamina = 100; damageCooldown = 0; burnTimer = 0; arrowCooldown = .25; particles.length = 0; arrows.length = 0; fireflies.forEach((firefly) => { firefly.active = true; }); paused = false; outcome = '';
     player.x = .18; player.y = .52;
     fox.x = .78; fox.y = .42; fox.radius = 36; fox.turn = 0; randomFoxDirection(fox);
     secondFoxActive = false; thirdFoxActive = false;
@@ -300,6 +320,7 @@ permalink: /forest-chase/
     copy.textContent = 'Survive 45 seconds. The fox is stronger, larger, and firing arrows.';
     startButton.textContent = 'Start Level 2';
     updateHealth();
+    updateStamina();
     overlay.style.display = 'grid';
   }
 
@@ -309,6 +330,13 @@ permalink: /forest-chase/
     healthValue.textContent = `${roundedHealth}%`;
     healthTrack.setAttribute('aria-valuenow', roundedHealth);
     healthFill.style.background = roundedHealth < 35 ? 'var(--forest-red)' : roundedHealth < 65 ? '#f2c14e' : 'var(--forest-lime)';
+  }
+
+  function updateStamina() {
+    const roundedStamina = Math.max(0, Math.ceil(stamina));
+    staminaFill.style.width = `${roundedStamina}%`;
+    staminaValue.textContent = `${roundedStamina}%`;
+    staminaTrack.setAttribute('aria-valuenow', roundedStamina);
   }
 
   function startAudio() {
@@ -381,10 +409,24 @@ permalink: /forest-chase/
     const vertical = (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) - (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
     const length = Math.hypot(horizontal, vertical) || 1;
     const nearObstacle = obstacles.some((obstacle) => Math.hypot((player.x - obstacle.x) * width, (player.y - obstacle.y) * height) <= obstacle.radius + player.radius + 12);
-    const movementSpeed = nearObstacle ? player.speed * .62 : player.speed;
+    const sprinting = keys.has('ShiftLeft') || keys.has('ShiftRight');
+    const sprintingActive = sprinting && stamina > 0 && (horizontal || vertical);
+    if (sprintingActive) stamina = Math.max(0, stamina - 36 * delta);
+    else stamina = Math.min(100, stamina + 12 * delta);
+    updateStamina();
+    const movementSpeed = (nearObstacle ? player.speed * .48 : player.speed) * (sprintingActive ? 1.55 : 1);
     player.x = Math.max(.035, Math.min(.965, player.x + horizontal / length * movementSpeed * delta / width));
     player.y = Math.max(.07, Math.min(.93, player.y + vertical / length * movementSpeed * delta / height));
     player.bob += delta * (horizontal || vertical ? 12 : 3);
+    fireflies.forEach((firefly) => {
+      if (!firefly.active || Math.hypot((player.x - firefly.x) * width, (player.y - firefly.y) * height) > player.radius + 17) return;
+      firefly.active = false;
+      health = Math.min(100, health + 5);
+      stamina = Math.min(100, stamina + 15);
+      updateHealth();
+      updateStamina();
+      status.textContent = 'Firefly found +health';
+    });
 
     [fox, ...(secondFoxActive ? [secondFox] : []), ...(thirdFoxActive ? [thirdFox] : [])].forEach((hunter) => {
       hunter.x += hunter.dx * hunter.speed * delta / width;
@@ -409,7 +451,7 @@ permalink: /forest-chase/
     }
     if (level === 2 && arrowCooldown <= 0) {
       fireArrow();
-      arrowCooldown = .55;
+      arrowCooldown = .35;
     }
     arrows.forEach((arrow) => {
       arrow.x += arrow.vx * delta;
@@ -465,6 +507,20 @@ permalink: /forest-chase/
     ctx.restore();
   }
 
+  function drawFirefly(firefly) {
+    if (!firefly.active) return;
+    const x = firefly.x * width;
+    const y = firefly.y * height;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 226, 119, .16)';
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = '#ffe277';
+    ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffe277';
+    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
   function drawCharacter(x, y, isFox, isBurning = false, isSecondFox = false, isBuffedFox = false) {
     const px = x * width, py = y * height;
     ctx.save(); ctx.translate(px, py + Math.sin(player.bob) * (isFox ? 2 : 3));
@@ -508,6 +564,7 @@ permalink: /forest-chase/
     ctx.strokeStyle = 'rgba(117, 164, 101, .28)'; ctx.lineWidth = 1;
     for (let i = 0; i < 22; i++) { const x = (i * 71) % width; const y = height * (.74 + (i % 5) * .045); ctx.beginPath(); ctx.moveTo(x, y + 9); ctx.lineTo(x - 4, y); ctx.moveTo(x, y + 9); ctx.lineTo(x + 5, y - 2); ctx.stroke(); }
     for (let i = 0; i < 18; i++) { ctx.fillStyle = i % 2 ? 'rgba(215, 241, 113, .55)' : 'rgba(255, 213, 106, .5)'; ctx.shadowBlur = 9; ctx.shadowColor = ctx.fillStyle; ctx.beginPath(); ctx.arc((i * 113 + 20) % width, height * (.42 + (i % 7) * .05), 1.8, 0, Math.PI * 2); ctx.fill(); } ctx.shadowBlur = 0;
+    fireflies.forEach(drawFirefly);
     obstacles.forEach(drawObstacle);
     arrows.forEach((arrow) => {
       const angle = Math.atan2(arrow.vy, arrow.vx);
